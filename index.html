@@ -225,21 +225,61 @@ function App() {
   };
   const saveEditMenu = () => { setMenus(ms=>ms.map(m=>m.id===editMenu.id?editMenu:m)); setEditMenu(null); };
 
+  const [dragging, setDragging] = useState(null); // index being dragged
+  const [dragOver, setDragOver] = useState(null);
+  const longPressTimer = useRef(null);
+  const touchStartYRef = useRef(null);
+  const touchIdxRef = useRef(null);
+  const isDraggingTouch = useRef(false);
+
+  // PC drag
   const onDragStart = i => { dragIdx.current=i; };
-  const onDragOver = (e,i) => { e.preventDefault(); dragOverIdx.current=i; };
+  const onDragOver = (e,i) => { e.preventDefault(); dragOverIdx.current=i; setDragOver(i); };
   const onDrop = () => {
     const from=dragIdx.current, to=dragOverIdx.current;
-    if(from===null||to===null||from===to) return;
-    const next=[...menus]; const [moved]=next.splice(from,1); next.splice(to,0,moved);
-    setMenus(next); dragIdx.current=null; dragOverIdx.current=null;
+    if(from!==null&&to!==null&&from!==to){
+      const next=[...menus];const[moved]=next.splice(from,1);next.splice(to,0,moved);setMenus(next);
+    }
+    dragIdx.current=null;dragOverIdx.current=null;setDragOver(null);
   };
-  const onTouchStart=(e,i)=>{touchIdx.current=i;touchStartY.current=e.touches[0].clientY;};
-  const onTouchEnd=e=>{
-    const diff=e.changedTouches[0].clientY-touchStartY.current;
-    const step=Math.round(diff/60); if(step===0)return;
-    const from=touchIdx.current, to=Math.max(0,Math.min(menus.length-1,from+step));
-    if(from===to)return;
-    const next=[...menus];const[moved]=next.splice(from,1);next.splice(to,0,moved);setMenus(next);
+
+  // Touch: long press to start drag
+  const onHandleTouchStart=(e,i)=>{
+    e.stopPropagation();
+    touchStartYRef.current=e.touches[0].clientY;
+    touchIdxRef.current=i;
+    isDraggingTouch.current=false;
+    longPressTimer.current=setTimeout(()=>{
+      isDraggingTouch.current=true;
+      setDragging(i);
+    },300);
+  };
+  const onHandleTouchMove=e=>{
+    if(!isDraggingTouch.current) return;
+    e.preventDefault();
+    const y=e.touches[0].clientY;
+    const els=document.querySelectorAll("[data-menu-item]");
+    let closest=null,closestDist=Infinity;
+    els.forEach((el,i)=>{
+      const rect=el.getBoundingClientRect();
+      const mid=rect.top+rect.height/2;
+      const dist=Math.abs(y-mid);
+      if(dist<closestDist){closestDist=dist;closest=i;}
+    });
+    if(closest!==null) setDragOver(closest);
+  };
+  const onHandleTouchEnd=()=>{
+    clearTimeout(longPressTimer.current);
+    if(isDraggingTouch.current){
+      const from=touchIdxRef.current;
+      const to=dragOver;
+      if(from!==null&&to!==null&&from!==to){
+        const next=[...menus];const[moved]=next.splice(from,1);next.splice(to,0,moved);setMenus(next);
+      }
+    }
+    setDragging(null);setDragOver(null);
+    isDraggingTouch.current=false;
+    touchIdxRef.current=null;
   };
 
   const exportJSON = () => { const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(history,null,2)],{type:"application/json"})); a.download="workout_history.json"; a.click(); };
@@ -431,10 +471,21 @@ function App() {
             </div>
           )}
           {menus.map((m,i)=>(
-            <div key={m.id} draggable onDragStart={()=>onDragStart(i)} onDragOver={e=>onDragOver(e,i)} onDrop={onDrop}
-              onTouchStart={e=>onTouchStart(e,i)} onTouchEnd={onTouchEnd}
-              style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"grab"}}>
-              <div style={{fontSize:20,color:D.hint,marginRight:10,userSelect:"none"}}>☰</div>
+            <div key={m.id}
+              data-menu-item={i}
+              draggable
+              onDragStart={()=>onDragStart(i)}
+              onDragOver={e=>onDragOver(e,i)}
+              onDrop={onDrop}
+              style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",
+                opacity: dragging===i ? 0.4 : 1,
+                border: dragOver===i&&dragging!==i ? "0.5px solid "+D.accent : "0.5px solid "+D.border,
+                transition:"border 0.1s"}}>
+              <div
+                onTouchStart={e=>onHandleTouchStart(e,i)}
+                onTouchMove={onHandleTouchMove}
+                onTouchEnd={onHandleTouchEnd}
+                style={{fontSize:20,color:dragging===i?D.accent:D.hint,marginRight:10,userSelect:"none",cursor:"grab",padding:"4px 6px 4px 0",touchAction:"none"}}>☰</div>
               <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:500}}>{m.name}</div>
                 <div style={{marginTop:5,display:"flex",gap:6,alignItems:"center"}}>
