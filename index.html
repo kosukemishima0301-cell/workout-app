@@ -13,8 +13,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
 input[type=number]::-webkit-inner-spin-button { opacity: 1; }
-input, select { -webkit-appearance: none; appearance: none; }
-button { -webkit-appearance: none; appearance: none; }
+input, select, button { -webkit-appearance: none; appearance: none; }
 </style>
 </head>
 <body>
@@ -53,53 +52,74 @@ const initHistory = [
   ]},
 ];
 
-function Badge({label}){
-  const c = catColor[label]||D.sub;
+// 同じ日付のエントリを1つにまとめる
+function mergeHistory(history) {
+  const map = {};
+  const order = [];
+  history.forEach(entry => {
+    if (!map[entry.date]) {
+      map[entry.date] = { ...entry, exercises: [...entry.exercises] };
+      order.push(entry.date);
+    } else {
+      entry.exercises.forEach(ex => {
+        const existing = map[entry.date].exercises.find(e => e.name === ex.name);
+        if (existing) {
+          existing.sets = [...existing.sets, ...ex.sets];
+        } else {
+          map[entry.date].exercises.push({ ...ex });
+        }
+      });
+    }
+  });
+  return order.map(d => map[d]).sort((a,b) => b.date.localeCompare(a.date));
+}
+
+function Badge({label}) {
+  const c = catColor[label] || D.sub;
   return <span style={{background:c+"25",color:c,fontSize:11,fontWeight:500,padding:"2px 9px",borderRadius:20,border:"0.5px solid "+c+"50"}}>{label}</span>;
 }
 
-function NumInput({value, onChange, width}){
+function NumInput({value, onChange, width}) {
   const [draft, setDraft] = useState(String(value));
-  const inp = {fontSize:14,padding:"6px 8px",borderRadius:8,border:"0.5px solid "+D.border,background:D.card2,color:D.text,outline:"none",width};
-  return(
+  return (
     <input
       type="number"
       value={draft}
-      style={inp}
-      onChange={e=>{
+      onChange={e => {
         setDraft(e.target.value);
         const n = Number(e.target.value);
-        if(e.target.value !== "" && !isNaN(n)) onChange(n);
+        if (e.target.value !== "" && !isNaN(n)) onChange(n);
       }}
-      onBlur={()=>{
-        if(draft===""||isNaN(Number(draft))){setDraft(String(value));}
+      onBlur={() => {
+        if (draft === "" || isNaN(Number(draft))) setDraft(String(value));
         else setDraft(String(Number(draft)));
       }}
+      style={{fontSize:14,padding:"6px 8px",borderRadius:8,border:"0.5px solid "+D.border,background:D.card2,color:D.text,outline:"none",width}}
     />
   );
 }
 
-function SetRow({set,idx,onChange,onDelete}){
-  return(
+function SetRow({set, idx, onChange, onDelete}) {
+  return (
     <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
       <span style={{fontSize:12,color:D.hint,minWidth:24}}>S{idx+1}</span>
-      <NumInput value={set.weight} width={64} onChange={v=>onChange({...set,weight:v})}/>
+      <NumInput value={set.weight} width={64} onChange={v => onChange({...set, weight:v})}/>
       <span style={{fontSize:12,color:D.sub}}>kg</span>
-      <NumInput value={set.reps} width={56} onChange={v=>onChange({...set,reps:v})}/>
+      <NumInput value={set.reps} width={56} onChange={v => onChange({...set, reps:v})}/>
       <span style={{fontSize:12,color:D.sub}}>rep</span>
       <button onClick={onDelete} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:D.hint,fontSize:18,lineHeight:1,padding:"0 2px"}}>×</button>
     </div>
   );
 }
 
-function DaySummaryCard({entry,onDelete,onClick}){
+function DaySummaryCard({entry, onDelete, onClick}) {
   const d = new Date(entry.date);
   const day = ["日","月","火","水","木","金","土"][d.getDay()];
-  return(
+  return (
     <div style={{background:D.card,border:"0.5px solid "+D.border,borderRadius:14,padding:"14px 16px",marginBottom:10,position:"relative"}}>
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <div style={{fontSize:13,fontWeight:500,color:D.sub,marginBottom:10,paddingRight:24}}>{entry.date}（{day}）</div>
-        {entry.exercises.map((ex,i)=>(
+        {entry.exercises.map((ex,i) => (
           <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <span style={{fontSize:14,color:D.text}}>{ex.name}</span>
             <Badge label={ex.category||"ー"}/>
@@ -111,116 +131,109 @@ function DaySummaryCard({entry,onDelete,onClick}){
   );
 }
 
-function DefFields({vals,onChange}){
-  const inp = {width:"100%",fontSize:13,background:"none",border:"none",color:D.text,outline:"none",textAlign:"center"};
-  return(
+function DefFields({vals, onChange}) {
+  return (
     <div style={{display:"flex",gap:8,marginBottom:12}}>
-      {[["重量","kg","defWeight"],["回数","rep","defReps"]].map(([label,unit,key])=>{
-        const [draft, setDraft] = useState(String(vals[key]));
-        return(
-          <div key={key} style={{flex:1,textAlign:"center"}}>
-            <div style={{fontSize:11,color:D.hint,marginBottom:4}}>{label}</div>
-            <div style={{display:"flex",alignItems:"center",gap:3,background:D.card2,borderRadius:8,padding:"4px 6px",border:"0.5px solid "+D.border}}>
-              <input type="number" value={draft} style={inp}
-                onChange={e=>{
-                  setDraft(e.target.value);
-                  const n=Number(e.target.value);
-                  if(e.target.value!==""&&!isNaN(n)) onChange(key,n);
-                }}
-                onBlur={()=>{
-                  if(draft===""||isNaN(Number(draft))) setDraft(String(vals[key]));
-                  else setDraft(String(Number(draft)));
-                }}
-              />
-              <span style={{fontSize:10,color:D.hint,whiteSpace:"nowrap"}}>{unit}</span>
-            </div>
+      {[["重量","kg","defWeight"],["回数","rep","defReps"]].map(([label,unit,key]) => (
+        <div key={key} style={{flex:1,textAlign:"center"}}>
+          <div style={{fontSize:11,color:D.hint,marginBottom:4}}>{label}</div>
+          <div style={{display:"flex",alignItems:"center",gap:3,background:D.card2,borderRadius:8,padding:"4px 6px",border:"0.5px solid "+D.border}}>
+            <NumInput value={vals[key]} onChange={v=>onChange(key,v)}
+              width="100%"
+            />
+            <span style={{fontSize:10,color:D.hint,whiteSpace:"nowrap"}}>{unit}</span>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
 
-function App(){
-  const [tab,setTab] = useState(0);
-  const [menus,setMenus] = useState(initMenus);
-  const [history,setHistory] = useState(initHistory);
-  const [workout,setWorkout] = useState(null);
-  const [newName,setNewName] = useState("");
-  const [newCat,setNewCat] = useState("胸");
-  const [newWeight,setNewWeight] = useState(60);
-  const [newReps,setNewReps] = useState(10);
-  const [showAdd,setShowAdd] = useState(false);
-  const [editMenu,setEditMenu] = useState(null);
-  const [selHistory,setSelHistory] = useState(null);
-  const [showPicker,setShowPicker] = useState(false);
+function App() {
+  const [tab, setTab] = useState(0);
+  const [menus, setMenus] = useState(initMenus);
+  const [history, setHistory] = useState(initHistory);
+  const [workout, setWorkout] = useState(null);
+  const [newName, setNewName] = useState("");
+  const [newCat, setNewCat] = useState("胸");
+  const [newWeight, setNewWeight] = useState(60);
+  const [newReps, setNewReps] = useState(10);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editMenu, setEditMenu] = useState(null);
+  const [selHistory, setSelHistory] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
   const fileRef = useRef(null);
 
-  const startWorkout = ()=>setWorkout({date:new Date().toISOString().slice(0,10),exercises:[]});
-  const addExercise = m=>{
-    setWorkout(w=>({...w,exercises:[...w.exercises,{name:m.name,category:m.category,sets:[{reps:m.defReps||10,weight:m.defWeight||60}]}]}));
+  const today = new Date().toISOString().slice(0,10);
+
+  const startWorkout = () => setWorkout({date: today, exercises: []});
+
+  const addExercise = m => {
+    setWorkout(w => ({...w, exercises:[...w.exercises, {name:m.name, category:m.category, sets:[{reps:m.defReps||10, weight:m.defWeight||60}]}]}));
     setShowPicker(false);
   };
-  const updateSet=(ei,si,ns)=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:ns)})}));
-  const deleteSet=(ei,si)=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.filter((_,j)=>j!==si)})}));
-  const addSet=ei=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>{if(i!==ei)return ex;const last=ex.sets[ex.sets.length-1]||{reps:10,weight:60};return{...ex,sets:[...ex.sets,{...last}]};})}));
-  const removeExercise=ei=>setWorkout(w=>({...w,exercises:w.exercises.filter((_,i)=>i!==ei)}));
-  const finishWorkout=()=>{if(!workout||workout.exercises.length===0)return;setHistory(h=>[{id:Date.now(),...workout},...h]);setWorkout(null);};
 
-  const saveMenu=()=>{
-    if(!newName.trim())return;
-    setMenus(m=>[...m,{id:Date.now(),name:newName.trim(),category:newCat,defWeight:newWeight,defReps:newReps}]);
-    setNewName("");setShowAdd(false);
-  };
-  const saveEditMenu=()=>{setMenus(ms=>ms.map(m=>m.id===editMenu.id?editMenu:m));setEditMenu(null);};
+  const updateSet = (ei,si,ns) => setWorkout(w => ({...w, exercises:w.exercises.map((ex,i) => i!==ei ? ex : {...ex, sets:ex.sets.map((s,j) => j!==si ? s : ns)})}));
+  const deleteSet = (ei,si) => setWorkout(w => ({...w, exercises:w.exercises.map((ex,i) => i!==ei ? ex : {...ex, sets:ex.sets.filter((_,j) => j!==si)})}));
+  const addSet = ei => setWorkout(w => ({...w, exercises:w.exercises.map((ex,i) => { if(i!==ei) return ex; const last=ex.sets[ex.sets.length-1]||{reps:10,weight:60}; return {...ex,sets:[...ex.sets,{...last}]}; })}));
+  const removeExercise = ei => setWorkout(w => ({...w, exercises:w.exercises.filter((_,i) => i!==ei)}));
 
-  const exportJSON=()=>{
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([JSON.stringify(history,null,2)],{type:"application/json"}));
-    a.download="workout_history.json";a.click();
+  const finishWorkout = () => {
+    if (!workout || workout.exercises.length === 0) return;
+    const newEntry = {id: Date.now(), ...workout};
+    setHistory(h => mergeHistory([...h, newEntry]));
+    setWorkout(null);
   };
-  const exportCSV=()=>{
-    const rows=[["日付","種目","部位","セット","重量(kg)","回数"]];
-    history.forEach(h=>h.exercises.forEach(ex=>ex.sets.forEach((s,si)=>rows.push([h.date,ex.name,ex.category||"",si+1,s.weight,s.reps]))));
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"}));
-    a.download="workout_history.csv";a.click();
+
+  const saveMenu = () => {
+    if (!newName.trim()) return;
+    setMenus(m => [...m, {id:Date.now(), name:newName.trim(), category:newCat, defWeight:newWeight, defReps:newReps}]);
+    setNewName(""); setShowAdd(false);
   };
-  const importJSON=e=>{
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      try{
-        const data=JSON.parse(ev.target.result);
-        if(Array.isArray(data)){
-          setHistory(h=>{
-            const existing=new Set(h.map(x=>x.date));
-            const added=data.filter(x=>!existing.has(x.date));
-            return [...h,...added].sort((a,b)=>b.date.localeCompare(a.date));
-          });
-          alert("インポート完了！（既存の日付はスキップしました）");
-        }else alert("データの形式が正しくありません");
-      }catch{alert("読み込みに失敗しました");}
+  const saveEditMenu = () => { setMenus(ms => ms.map(m => m.id===editMenu.id ? editMenu : m)); setEditMenu(null); };
+
+  const exportJSON = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(history,null,2)],{type:"application/json"}));
+    a.download = "workout_history.json"; a.click();
+  };
+  const exportCSV = () => {
+    const rows = [["日付","種目","部位","セット","重量(kg)","回数"]];
+    history.forEach(h => h.exercises.forEach(ex => ex.sets.forEach((s,si) => rows.push([h.date,ex.name,ex.category||"",si+1,s.weight,s.reps]))));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"}));
+    a.download = "workout_history.csv"; a.click();
+  };
+  const importJSON = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (Array.isArray(data)) {
+          setHistory(h => mergeHistory([...h, ...data]));
+          alert("インポート完了！（同じ日付はまとめました）");
+        } else alert("データの形式が正しくありません");
+      } catch { alert("読み込みに失敗しました"); }
     };
-    reader.readAsText(file);e.target.value="";
+    reader.readAsText(file); e.target.value = "";
   };
-  const deleteEntry=id=>setHistory(h=>h.filter(x=>x.id!==id));
-  const clearAll=()=>{if(window.confirm("全履歴を削除しますか？"))setHistory([]);};
-  const deleteExercise=(histId,ei)=>{
-    const updated={...history.find(x=>x.id===histId)};
-    updated.exercises=updated.exercises.filter((_,i)=>i!==ei);
-    setHistory(h=>h.map(x=>x.id===histId?updated:x));
-    if(updated.exercises.length===0)setSelHistory(null);
+  const deleteEntry = id => setHistory(h => h.filter(x => x.id !== id));
+  const clearAll = () => { if (window.confirm("全履歴を削除しますか？")) setHistory([]); };
+  const deleteExercise = (histId, ei) => {
+    const entry = history.find(x => x.id === histId);
+    const updated = {...entry, exercises: entry.exercises.filter((_,i) => i!==ei)};
+    setHistory(h => h.map(x => x.id===histId ? updated : x));
+    if (updated.exercises.length === 0) setSelHistory(null);
     else setSelHistory(updated);
   };
 
-  const card={background:D.card,border:"0.5px solid "+D.border,borderRadius:14,padding:"14px 16px",marginBottom:12};
-  const btnBase={fontSize:12,borderRadius:8,padding:"6px 12px",cursor:"pointer"};
+  const card = {background:D.card,border:"0.5px solid "+D.border,borderRadius:14,padding:"14px 16px",marginBottom:12};
+  const btn = {fontSize:12,borderRadius:8,padding:"6px 12px",cursor:"pointer"};
 
-  return(
+  return (
     <div style={{maxWidth:390,margin:"0 auto",background:D.bg,minHeight:"100vh",paddingBottom:80,color:D.text}}>
 
-      {/* Header */}
       <div style={{padding:"22px 16px 14px",borderBottom:"0.5px solid "+D.border}}>
         <div style={{fontSize:18,fontWeight:500}}>💪 筋トレログ</div>
         <div style={{fontSize:12,color:D.sub}}>{new Date().toLocaleDateString("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"short"})}</div>
@@ -229,46 +242,48 @@ function App(){
       <div style={{padding:16}}>
 
         {/* ホーム 待機 */}
-        {tab===0&&!workout&&(<>
+        {tab===0 && !workout && (<>
           <div style={{background:D.card,border:"0.5px solid "+D.border,borderRadius:16,padding:"28px 20px",textAlign:"center",marginBottom:20}}>
             <div style={{fontSize:44,marginBottom:10}}>🏋️</div>
             <div style={{fontSize:16,fontWeight:500,marginBottom:4}}>今日のトレーニング</div>
             <div style={{fontSize:13,color:D.sub,marginBottom:20}}>種目を追加して記録しよう</div>
             <button onClick={startWorkout} style={{background:D.accent,color:"#fff",border:"none",borderRadius:12,padding:"13px 36px",fontSize:15,fontWeight:500,cursor:"pointer"}}>ワークアウト開始</button>
           </div>
-          {history.length>0&&(<>
+          {history.length > 0 && (<>
             <div style={{fontSize:13,color:D.sub,marginBottom:10,fontWeight:500}}>最近の記録</div>
-            {history.slice(0,2).map(h=>(
+            {history.slice(0,2).map(h => (
               <DaySummaryCard key={h.id} entry={h} onDelete={()=>deleteEntry(h.id)} onClick={()=>{setSelHistory(h);setTab(2);}}/>
             ))}
           </>)}
         </>)}
 
         {/* ホーム ワークアウト中 */}
-        {tab===0&&workout&&(<>
+        {tab===0 && workout && (<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:15,fontWeight:500}}>トレーニング中 🔥</div>
             <button onClick={finishWorkout} style={{background:D.green,color:"#0f0f0f",border:"none",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:500,cursor:"pointer"}}>完了・保存</button>
           </div>
-          {workout.exercises.length===0&&<div style={{textAlign:"center",padding:"28px 0",color:D.hint,fontSize:13}}>「種目を追加」から種目を選んでください</div>}
-          {workout.exercises.map((ex,ei)=>(
+          {workout.exercises.length === 0 && <div style={{textAlign:"center",padding:"28px 0",color:D.hint,fontSize:13}}>「種目を追加」から種目を選んでください</div>}
+          {workout.exercises.map((ex,ei) => (
             <div key={ei} style={card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <div style={{fontSize:14,fontWeight:500}}>{ex.name}</div>
                 <button onClick={()=>removeExercise(ei)} style={{background:"none",border:"none",cursor:"pointer",color:D.hint,fontSize:20}}>×</button>
               </div>
               <div style={{fontSize:11,color:D.hint,marginBottom:8,paddingLeft:32,display:"flex",gap:44}}><span>重量</span><span>回数</span></div>
-              {ex.sets.map((s,si)=>(
+              {ex.sets.map((s,si) => (
                 <SetRow key={si} set={s} idx={si} onChange={ns=>updateSet(ei,si,ns)} onDelete={()=>deleteSet(ei,si)}/>
               ))}
               <button onClick={()=>addSet(ei)} style={{marginTop:4,fontSize:13,color:D.accent,background:D.accentDim,border:"0.5px solid "+D.accent+"44",borderRadius:8,padding:"6px 14px",cursor:"pointer"}}>+ セット追加</button>
             </div>
           ))}
-          <button onClick={()=>setShowPicker(v=>!v)} style={{width:"100%",padding:13,borderRadius:12,border:"0.5px dashed "+D.border,background:"none",color:D.sub,fontSize:14,cursor:"pointer",marginTop:4}}>+ 種目を追加</button>
-          {showPicker&&(
-            <div style={{...card,marginTop:10}}>
+          <button onClick={()=>setShowPicker(v=>!v)} style={{width:"100%",padding:13,borderRadius:12,border:"0.5px dashed "+D.border,background:"none",color:D.sub,fontSize:14,cursor:"pointer",marginTop:4}}>
+            {showPicker ? "▲ 閉じる" : "+ 種目を追加"}
+          </button>
+          {showPicker && (
+            <div style={{...card,marginTop:8}}>
               <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>種目を選択</div>
-              {menus.map(m=>(
+              {menus.map(m => (
                 <div key={m.id} onClick={()=>addExercise(m)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"0.5px solid "+D.border,cursor:"pointer"}}>
                   <span style={{fontSize:14}}>{m.name}</span>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -277,18 +292,17 @@ function App(){
                   </div>
                 </div>
               ))}
-              <button onClick={()=>setShowPicker(false)} style={{marginTop:10,fontSize:13,color:D.sub,background:"none",border:"none",cursor:"pointer"}}>キャンセル</button>
             </div>
           )}
         </>)}
 
         {/* メニュー */}
-        {tab===1&&(<>
+        {tab===1 && (<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:15,fontWeight:500}}>種目リスト</div>
-            <button onClick={()=>setShowAdd(v=>!v)} style={{...btnBase,color:D.accent,background:D.accentDim,border:"0.5px solid "+D.accent+"44"}}>+ 追加</button>
+            <button onClick={()=>setShowAdd(v=>!v)} style={{...btn,color:D.accent,background:D.accentDim,border:"0.5px solid "+D.accent+"44"}}>+ 追加</button>
           </div>
-          {showAdd&&(
+          {showAdd && (
             <div style={{...card,marginBottom:16}}>
               <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>新しい種目</div>
               <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="種目名"
@@ -298,14 +312,14 @@ function App(){
                 {cats.map(c=><option key={c}>{c}</option>)}
               </select>
               <div style={{fontSize:12,color:D.sub,marginBottom:6}}>デフォルト設定</div>
-              <DefFields vals={{defWeight:newWeight,defReps:newReps,defSets:newSets}} onChange={(k,v)=>{if(k==="defWeight")setNewWeight(v);else if(k==="defReps")setNewReps(v);else setNewSets(v);}}/>
+              <DefFields vals={{defWeight:newWeight,defReps:newReps}} onChange={(k,v)=>{if(k==="defWeight")setNewWeight(v);else setNewReps(v);}}/>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={saveMenu} style={{flex:1,background:D.accent,color:"#fff",border:"none",borderRadius:8,padding:9,fontSize:13,cursor:"pointer"}}>保存</button>
                 <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"none",border:"0.5px solid "+D.border,borderRadius:8,padding:9,fontSize:13,cursor:"pointer",color:D.sub}}>キャンセル</button>
               </div>
             </div>
           )}
-          {editMenu&&(
+          {editMenu && (
             <div style={{...card,marginBottom:16,border:"0.5px solid "+D.accent+"55"}}>
               <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>編集: {editMenu.name}</div>
               <select value={editMenu.category} onChange={e=>setEditMenu(m=>({...m,category:e.target.value}))}
@@ -320,7 +334,7 @@ function App(){
               </div>
             </div>
           )}
-          {menus.map(m=>(
+          {menus.map(m => (
             <div key={m.id} style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div>
                 <div style={{fontSize:14,fontWeight:500}}>{m.name}</div>
@@ -338,30 +352,30 @@ function App(){
         </>)}
 
         {/* 履歴一覧 */}
-        {tab===2&&!selHistory&&(<>
+        {tab===2 && !selHistory && (<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:15,fontWeight:500}}>トレーニング履歴</div>
             <div style={{display:"flex",gap:6}}>
               <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON}/>
-              <button onClick={()=>fileRef.current.click()} style={{...btnBase,color:D.sub,background:D.card2,border:"0.5px solid "+D.border}}>取込</button>
-              <button onClick={exportJSON} style={{...btnBase,color:D.accent,background:D.accentDim,border:"0.5px solid "+D.accent+"44"}}>JSON</button>
-              <button onClick={exportCSV} style={{...btnBase,color:D.green,background:D.greenDim,border:"0.5px solid "+D.green+"44"}}>CSV</button>
-              <button onClick={clearAll} style={{...btnBase,color:"#e05c8a",background:"rgba(224,92,138,0.1)",border:"0.5px solid rgba(224,92,138,0.3)"}}>全削除</button>
+              <button onClick={()=>fileRef.current.click()} style={{...btn,color:D.sub,background:D.card2,border:"0.5px solid "+D.border}}>取込</button>
+              <button onClick={exportJSON} style={{...btn,color:D.accent,background:D.accentDim,border:"0.5px solid "+D.accent+"44"}}>JSON</button>
+              <button onClick={exportCSV} style={{...btn,color:D.green,background:D.greenDim,border:"0.5px solid "+D.green+"44"}}>CSV</button>
+              <button onClick={clearAll} style={{...btn,color:"#e05c8a",background:"rgba(224,92,138,0.1)",border:"0.5px solid rgba(224,92,138,0.3)"}}>全削除</button>
             </div>
           </div>
-          {history.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:D.hint,fontSize:13}}>まだ記録がありません</div>}
-          {history.map(h=>(
+          {history.length===0 && <div style={{textAlign:"center",padding:"32px 0",color:D.hint,fontSize:13}}>まだ記録がありません</div>}
+          {history.map(h => (
             <DaySummaryCard key={h.id} entry={h} onDelete={()=>deleteEntry(h.id)} onClick={()=>setSelHistory(h)}/>
           ))}
         </>)}
 
         {/* 履歴詳細 */}
-        {tab===2&&selHistory&&(<>
+        {tab===2 && selHistory && (<>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
             <button onClick={()=>setSelHistory(null)} style={{background:D.card2,border:"0.5px solid "+D.border,borderRadius:8,cursor:"pointer",fontSize:16,color:D.sub,padding:"4px 10px"}}>←</button>
             <div style={{fontSize:15,fontWeight:500}}>{selHistory.date}</div>
           </div>
-          {selHistory.exercises.map((ex,ei)=>(
+          {selHistory.exercises.map((ex,ei) => (
             <div key={ei} style={card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <div style={{fontSize:14,fontWeight:500}}>{ex.name}</div>
@@ -370,9 +384,9 @@ function App(){
                   <button onClick={()=>deleteExercise(selHistory.id,ei)} style={{background:"none",border:"none",cursor:"pointer",color:D.hint,fontSize:18,lineHeight:1,padding:"0 2px"}}>×</button>
                 </div>
               </div>
-              <div style={{display:"flex",gap:4}}>
-                {ex.sets.map((s,si)=>(
-                  <div key={si} style={{background:D.card2,borderRadius:8,padding:"6px 10px",textAlign:"center",flex:1}}>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                {ex.sets.map((s,si) => (
+                  <div key={si} style={{background:D.card2,borderRadius:8,padding:"6px 10px",textAlign:"center",minWidth:56}}>
                     <div style={{fontSize:13,fontWeight:500,color:D.accent}}>{s.weight}<span style={{fontSize:10,color:D.sub}}>kg</span></div>
                     <div style={{fontSize:12,color:D.sub}}>{s.reps}rep</div>
                   </div>
@@ -386,10 +400,10 @@ function App(){
 
       {/* Tab Bar */}
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:390,background:D.card,borderTop:"0.5px solid "+D.border,display:"flex"}}>
-        {["ホーム","メニュー","履歴"].map((t,i)=>{
-          const icons=["🏠","📋","📅"];
-          const active=tab===i;
-          return(
+        {["ホーム","メニュー","履歴"].map((t,i) => {
+          const icons = ["🏠","📋","📅"];
+          const active = tab===i;
+          return (
             <button key={i} onClick={()=>{setTab(i);setSelHistory(null);}} style={{flex:1,padding:"10px 0 14px",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
               <span style={{fontSize:20}}>{icons[i]}</span>
               <span style={{fontSize:10,color:active?D.accent:D.hint,fontWeight:active?500:400}}>{t}</span>
