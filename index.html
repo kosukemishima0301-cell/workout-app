@@ -58,14 +58,34 @@ function Badge({label}){
   return <span style={{background:c+"25",color:c,fontSize:11,fontWeight:500,padding:"2px 9px",borderRadius:20,border:"0.5px solid "+c+"50"}}>{label}</span>;
 }
 
+function NumInput({value, onChange, width}){
+  const [draft, setDraft] = useState(String(value));
+  const inp = {fontSize:14,padding:"6px 8px",borderRadius:8,border:"0.5px solid "+D.border,background:D.card2,color:D.text,outline:"none",width};
+  return(
+    <input
+      type="number"
+      value={draft}
+      style={inp}
+      onChange={e=>{
+        setDraft(e.target.value);
+        const n = Number(e.target.value);
+        if(e.target.value !== "" && !isNaN(n)) onChange(n);
+      }}
+      onBlur={()=>{
+        if(draft===""||isNaN(Number(draft))){setDraft(String(value));}
+        else setDraft(String(Number(draft)));
+      }}
+    />
+  );
+}
+
 function SetRow({set,idx,onChange,onDelete}){
-  const inp = {fontSize:14,padding:"6px 8px",borderRadius:8,border:"0.5px solid "+D.border,background:D.card2,color:D.text,outline:"none"};
   return(
     <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
       <span style={{fontSize:12,color:D.hint,minWidth:24}}>S{idx+1}</span>
-      <input type="number" value={set.weight} onChange={e=>onChange({...set,weight:Number(e.target.value)})} style={{...inp,width:64}}/>
+      <NumInput value={set.weight} width={64} onChange={v=>onChange({...set,weight:v})}/>
       <span style={{fontSize:12,color:D.sub}}>kg</span>
-      <input type="number" value={set.reps} onChange={e=>onChange({...set,reps:Number(e.target.value)})} style={{...inp,width:56}}/>
+      <NumInput value={set.reps} width={56} onChange={v=>onChange({...set,reps:v})}/>
       <span style={{fontSize:12,color:D.sub}}>rep</span>
       <button onClick={onDelete} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:D.hint,fontSize:18,lineHeight:1,padding:"0 2px"}}>×</button>
     </div>
@@ -92,18 +112,31 @@ function DaySummaryCard({entry,onDelete,onClick}){
 }
 
 function DefFields({vals,onChange}){
+  const inp = {width:"100%",fontSize:13,background:"none",border:"none",color:D.text,outline:"none",textAlign:"center"};
   return(
     <div style={{display:"flex",gap:8,marginBottom:12}}>
-      {[["重量","kg","defWeight"],["回数","rep","defReps"],["セット","set","defSets"]].map(([label,unit,key])=>(
-        <div key={key} style={{flex:1,textAlign:"center"}}>
-          <div style={{fontSize:11,color:D.hint,marginBottom:4}}>{label}</div>
-          <div style={{display:"flex",alignItems:"center",gap:3,background:D.card2,borderRadius:8,padding:"4px 6px",border:"0.5px solid "+D.border}}>
-            <input type="number" value={vals[key]} onChange={e=>onChange(key,Number(e.target.value))}
-              style={{width:"100%",fontSize:13,background:"none",border:"none",color:D.text,outline:"none",textAlign:"center"}}/>
-            <span style={{fontSize:10,color:D.hint,whiteSpace:"nowrap"}}>{unit}</span>
+      {[["重量","kg","defWeight"],["回数","rep","defReps"],["セット","set","defSets"]].map(([label,unit,key])=>{
+        const [draft, setDraft] = useState(String(vals[key]));
+        return(
+          <div key={key} style={{flex:1,textAlign:"center"}}>
+            <div style={{fontSize:11,color:D.hint,marginBottom:4}}>{label}</div>
+            <div style={{display:"flex",alignItems:"center",gap:3,background:D.card2,borderRadius:8,padding:"4px 6px",border:"0.5px solid "+D.border}}>
+              <input type="number" value={draft} style={inp}
+                onChange={e=>{
+                  setDraft(e.target.value);
+                  const n=Number(e.target.value);
+                  if(e.target.value!==""&&!isNaN(n)) onChange(key,n);
+                }}
+                onBlur={()=>{
+                  if(draft===""||isNaN(Number(draft))) setDraft(String(vals[key]));
+                  else setDraft(String(Number(draft)));
+                }}
+              />
+              <span style={{fontSize:10,color:D.hint,whiteSpace:"nowrap"}}>{unit}</span>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
