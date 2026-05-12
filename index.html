@@ -232,6 +232,8 @@ function App() {
   const touchIdxRef = useRef(null);
   const isDraggingTouch = useRef(false);
 
+  const menuItemRefs = useRef([]);
+
   // PC drag
   const onDragStart = i => { dragIdx.current=i; };
   const onDragOver = (e,i) => { e.preventDefault(); dragOverIdx.current=i; setDragOver(i); };
@@ -252,6 +254,14 @@ function App() {
     longPressTimer.current=setTimeout(()=>{
       isDraggingTouch.current=true;
       setDragging(i);
+      // 直接スタイルを適用して浮かせる
+      const el=menuItemRefs.current[i];
+      if(el){
+        el.style.transform="scale(1.03)";
+        el.style.boxShadow="0 8px 24px rgba(0,0,0,0.6)";
+        el.style.opacity="0.5";
+        el.style.zIndex="10";
+      }
     },300);
   };
   const onHandleTouchMove=e=>{
@@ -275,6 +285,14 @@ function App() {
       const to=dragOver;
       if(from!==null&&to!==null&&from!==to){
         const next=[...menus];const[moved]=next.splice(from,1);next.splice(to,0,moved);setMenus(next);
+      }
+      // スタイルをリセット
+      const el=menuItemRefs.current[touchIdxRef.current];
+      if(el){
+        el.style.transform="";
+        el.style.boxShadow="";
+        el.style.opacity="";
+        el.style.zIndex="";
       }
     }
     setDragging(null);setDragOver(null);
@@ -473,17 +491,18 @@ function App() {
           {menus.map((m,i)=>(
             <div key={m.id}
               data-menu-item={i}
+              ref={el=>menuItemRefs.current[i]=el}
               draggable
               onDragStart={()=>onDragStart(i)}
               onDragOver={e=>onDragOver(e,i)}
               onDrop={onDrop}
               style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",
-                opacity: dragging===i ? 0.5 : 1,
                 transform: dragging===i ? "scale(1.03)" : "scale(1)",
                 boxShadow: dragging===i ? "0 8px 24px rgba(0,0,0,0.6)" : "none",
+                opacity: dragging===i ? 0.5 : 1,
                 border: dragOver===i&&dragging!==i ? "0.5px solid "+D.accent : "0.5px solid "+D.border,
-                transition:"transform 0.15s, box-shadow 0.15s, border 0.1s, opacity 0.15s",
-                zIndex: dragging===i ? 10 : 1, position:"relative"}}>
+                transition:"transform 0.15s, box-shadow 0.15s, opacity 0.15s, border 0.1s",
+                position:"relative", zIndex: dragging===i ? 10 : 1}}>
               <div
                 onTouchStart={e=>onHandleTouchStart(e,i)}
                 onTouchMove={onHandleTouchMove}
