@@ -254,13 +254,11 @@ function App() {
     longPressTimer.current=setTimeout(()=>{
       isDraggingTouch.current=true;
       setDragging(i);
-      // 直接スタイルを適用して浮かせる
       const el=menuItemRefs.current[i];
       if(el){
-        el.style.transform="scale(1.03)";
-        el.style.boxShadow="0 8px 24px rgba(0,0,0,0.6)";
-        el.style.opacity="0.5";
-        el.style.zIndex="10";
+        el.style.background="#2a3a4a";
+        el.style.borderColor=D.accent;
+        el.style.borderWidth="1.5px";
       }
     },300);
   };
@@ -289,10 +287,9 @@ function App() {
       // スタイルをリセット
       const el=menuItemRefs.current[touchIdxRef.current];
       if(el){
-        el.style.transform="";
-        el.style.boxShadow="";
-        el.style.opacity="";
-        el.style.zIndex="";
+        el.style.background="";
+        el.style.borderColor="";
+        el.style.borderWidth="";
       }
     }
     setDragging(null);setDragOver(null);
@@ -497,12 +494,9 @@ function App() {
               onDragOver={e=>onDragOver(e,i)}
               onDrop={onDrop}
               style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",
-                transform: dragging===i ? "scale(1.03)" : "scale(1)",
-                boxShadow: dragging===i ? "0 8px 24px rgba(0,0,0,0.6)" : "none",
-                opacity: dragging===i ? 0.5 : 1,
                 border: dragOver===i&&dragging!==i ? "0.5px solid "+D.accent : "0.5px solid "+D.border,
-                transition:"transform 0.15s, box-shadow 0.15s, opacity 0.15s, border 0.1s",
-                position:"relative", zIndex: dragging===i ? 10 : 1}}>
+                transition:"border 0.1s",
+                position:"relative"}}>
               <div
                 onTouchStart={e=>onHandleTouchStart(e,i)}
                 onTouchMove={onHandleTouchMove}
