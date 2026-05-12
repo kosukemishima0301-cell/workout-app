@@ -36,10 +36,10 @@ const catColor = {
 const cats = ["胸","脚","背中","肩","腕","腹"];
 
 const initMenus = [
-  {id:1,name:"ベンチプレス",category:"胸",defWeight:60,defReps:10,defSets:3},
-  {id:2,name:"スクワット",category:"脚",defWeight:80,defReps:10,defSets:3},
-  {id:3,name:"デッドリフト",category:"背中",defWeight:100,defReps:8,defSets:3},
-  {id:4,name:"ショルダープレス",category:"肩",defWeight:40,defReps:10,defSets:3},
+  {id:1,name:"ベンチプレス",category:"胸",defWeight:60,defReps:10},
+  {id:2,name:"スクワット",category:"脚",defWeight:80,defReps:10},
+  {id:3,name:"デッドリフト",category:"背中",defWeight:100,defReps:8},
+  {id:4,name:"ショルダープレス",category:"肩",defWeight:40,defReps:10},
 ];
 
 const initHistory = [
@@ -115,7 +115,7 @@ function DefFields({vals,onChange}){
   const inp = {width:"100%",fontSize:13,background:"none",border:"none",color:D.text,outline:"none",textAlign:"center"};
   return(
     <div style={{display:"flex",gap:8,marginBottom:12}}>
-      {[["重量","kg","defWeight"],["回数","rep","defReps"],["セット","set","defSets"]].map(([label,unit,key])=>{
+      {[["重量","kg","defWeight"],["回数","rep","defReps"]].map(([label,unit,key])=>{
         const [draft, setDraft] = useState(String(vals[key]));
         return(
           <div key={key} style={{flex:1,textAlign:"center"}}>
@@ -150,7 +150,6 @@ function App(){
   const [newCat,setNewCat] = useState("胸");
   const [newWeight,setNewWeight] = useState(60);
   const [newReps,setNewReps] = useState(10);
-  const [newSets,setNewSets] = useState(3);
   const [showAdd,setShowAdd] = useState(false);
   const [editMenu,setEditMenu] = useState(null);
   const [selHistory,setSelHistory] = useState(null);
@@ -159,8 +158,7 @@ function App(){
 
   const startWorkout = ()=>setWorkout({date:new Date().toISOString().slice(0,10),exercises:[]});
   const addExercise = m=>{
-    const sets = Array.from({length:m.defSets||3},()=>({reps:m.defReps||10,weight:m.defWeight||60}));
-    setWorkout(w=>({...w,exercises:[...w.exercises,{name:m.name,category:m.category,sets}]}));
+    setWorkout(w=>({...w,exercises:[...w.exercises,{name:m.name,category:m.category,sets:[{reps:m.defReps||10,weight:m.defWeight||60}]}]}));
     setShowPicker(false);
   };
   const updateSet=(ei,si,ns)=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:ns)})}));
@@ -171,7 +169,7 @@ function App(){
 
   const saveMenu=()=>{
     if(!newName.trim())return;
-    setMenus(m=>[...m,{id:Date.now(),name:newName.trim(),category:newCat,defWeight:newWeight,defReps:newReps,defSets:newSets}]);
+    setMenus(m=>[...m,{id:Date.now(),name:newName.trim(),category:newCat,defWeight:newWeight,defReps:newReps}]);
     setNewName("");setShowAdd(false);
   };
   const saveEditMenu=()=>{setMenus(ms=>ms.map(m=>m.id===editMenu.id?editMenu:m));setEditMenu(null);};
@@ -274,7 +272,7 @@ function App(){
                 <div key={m.id} onClick={()=>addExercise(m)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"0.5px solid "+D.border,cursor:"pointer"}}>
                   <span style={{fontSize:14}}>{m.name}</span>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:11,color:D.hint}}>{m.defWeight}kg×{m.defReps}rep×{m.defSets}set</span>
+                    <span style={{fontSize:11,color:D.hint}}>{m.defWeight}kg×{m.defReps}rep</span>
                     <Badge label={m.category}/>
                   </div>
                 </div>
@@ -328,7 +326,7 @@ function App(){
                 <div style={{fontSize:14,fontWeight:500}}>{m.name}</div>
                 <div style={{marginTop:5,display:"flex",gap:6,alignItems:"center"}}>
                   <Badge label={m.category}/>
-                  <span style={{fontSize:11,color:D.hint}}>{m.defWeight}kg×{m.defReps}rep×{m.defSets}set</span>
+                  <span style={{fontSize:11,color:D.hint}}>{m.defWeight}kg × {m.defReps}rep</span>
                 </div>
               </div>
               <div style={{display:"flex",gap:8}}>
