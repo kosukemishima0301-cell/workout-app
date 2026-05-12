@@ -256,15 +256,21 @@ function App() {
       setDragging(i);
       const el=menuItemRefs.current[i];
       if(el){
-        el.style.background="#2a3a4a";
-        el.style.borderColor=D.accent;
-        el.style.borderWidth="1.5px";
+        el.style.willChange="transform";
+        el.style.isolation="isolate";
+        el.style.transform="scale(1.04)";
+        el.style.boxShadow="0 10px 30px rgba(0,0,0,0.7)";
+        el.style.opacity="0.85";
+        el.style.zIndex="999";
+        el.style.position="relative";
+        el.style.transition="transform 0.15s, box-shadow 0.15s, opacity 0.15s";
       }
     },300);
   };
   const onHandleTouchMove=e=>{
     if(!isDraggingTouch.current) return;
     e.preventDefault();
+    e.stopPropagation();
     const y=e.touches[0].clientY;
     const els=document.querySelectorAll("[data-menu-item]");
     let closest=null,closestDist=Infinity;
@@ -284,12 +290,16 @@ function App() {
       if(from!==null&&to!==null&&from!==to){
         const next=[...menus];const[moved]=next.splice(from,1);next.splice(to,0,moved);setMenus(next);
       }
-      // スタイルをリセット
       const el=menuItemRefs.current[touchIdxRef.current];
       if(el){
-        el.style.background="";
-        el.style.borderColor="";
-        el.style.borderWidth="";
+        el.style.willChange="";
+        el.style.isolation="";
+        el.style.transform="";
+        el.style.boxShadow="";
+        el.style.opacity="";
+        el.style.zIndex="";
+        el.style.position="";
+        el.style.transition="";
       }
     }
     setDragging(null);setDragOver(null);
