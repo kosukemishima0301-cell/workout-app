@@ -19,7 +19,16 @@ input, select, button { -webkit-appearance: none; appearance: none; }
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useRef } = React;
+const { useState, useRef, useEffect } = React;
+
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
+    catch { return initial; }
+  });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }, [val]);
+  return [val, setVal];
+}
 
 const D = {
   bg:"#0f0f0f", card:"#1a1a1a", card2:"#222", border:"#2e2e2e",
@@ -151,8 +160,8 @@ function DefFields({vals, onChange}) {
 
 function App() {
   const [tab, setTab] = useState(0);
-  const [menus, setMenus] = useState(initMenus);
-  const [history, setHistory] = useState(initHistory);
+  const [menus, setMenus] = useLocalStorage("workout_menus", initMenus);
+  const [history, setHistory] = useLocalStorage("workout_history", initHistory);
   const [workout, setWorkout] = useState(null);
   const [newName, setNewName] = useState("");
   const [newCat, setNewCat] = useState("胸");
@@ -235,7 +244,7 @@ function App() {
     <div style={{maxWidth:390,margin:"0 auto",background:D.bg,minHeight:"100vh",paddingBottom:80,color:D.text}}>
 
       <div style={{padding:"22px 16px 14px",borderBottom:"0.5px solid "+D.border}}>
-        <div style={{fontSize:18,fontWeight:500}}>💪 筋トレログ</div>
+        <div style={{fontSize:18,fontWeight:500}}>💪 WORKOUT</div>
         <div style={{fontSize:12,color:D.sub}}>{new Date().toLocaleDateString("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"short"})}</div>
       </div>
 
