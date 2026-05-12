@@ -478,9 +478,12 @@ function App() {
               onDragOver={e=>onDragOver(e,i)}
               onDrop={onDrop}
               style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",
-                opacity: dragging===i ? 0.4 : 1,
+                opacity: dragging===i ? 0.5 : 1,
+                transform: dragging===i ? "scale(1.03)" : "scale(1)",
+                boxShadow: dragging===i ? "0 8px 24px rgba(0,0,0,0.6)" : "none",
                 border: dragOver===i&&dragging!==i ? "0.5px solid "+D.accent : "0.5px solid "+D.border,
-                transition:"border 0.1s"}}>
+                transition:"transform 0.15s, box-shadow 0.15s, border 0.1s, opacity 0.15s",
+                zIndex: dragging===i ? 10 : 1, position:"relative"}}>
               <div
                 onTouchStart={e=>onHandleTouchStart(e,i)}
                 onTouchMove={onHandleTouchMove}
